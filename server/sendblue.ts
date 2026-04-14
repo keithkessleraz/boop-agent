@@ -51,24 +51,16 @@ export async function sendImessage(toNumber: string, text: string): Promise<void
     console.warn("[sendblue] missing credentials — not sending");
     return;
   }
-  const from = process.env.SENDBLUE_FROM_NUMBER;
   const plain = stripMarkdown(text);
   for (const part of chunk(plain)) {
     const res = await fetch(`${API_BASE}/send-message`, {
       method: "POST",
       headers: h,
-      body: JSON.stringify({ number: toNumber, content: part, from_number: from }),
+      body: JSON.stringify({ number: toNumber, content: part }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       console.error(`[sendblue] send failed ${res.status}: ${body}`);
-      if (body.includes("Cannot send messages to self")) {
-        console.error(
-          `[sendblue] → SENDBLUE_FROM_NUMBER is set to the number you're texting FROM. ` +
-            `It needs to be the Sendblue-provisioned number on your account (the one people text TO), ` +
-            `or blank to let Sendblue auto-pick. Check .env.local.`,
-        );
-      }
     }
   }
 }

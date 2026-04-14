@@ -102,7 +102,6 @@ async function sendblueInvoker(): Promise<{ cmd: string; leading: string[] }> {
 interface SendblueKeys {
   apiKey?: string;
   apiSecret?: string;
-  fromNumber?: string;
 }
 
 function parseSendblueKeys(output: string): SendblueKeys {
@@ -114,8 +113,6 @@ function parseSendblueKeys(output: string): SendblueKeys {
     if (json.api_key_id || json.apiKeyId) keys.apiKey = json.api_key_id ?? json.apiKeyId;
     if (json.api_secret_key || json.apiSecretKey)
       keys.apiSecret = json.api_secret_key ?? json.apiSecretKey;
-    if (json.phone_number || json.phoneNumber)
-      keys.fromNumber = json.phone_number ?? json.phoneNumber;
     if (keys.apiKey && keys.apiSecret) return keys;
   } catch {
     /* not json, fall through to text parsing */
@@ -127,13 +124,9 @@ function parseSendblueKeys(output: string): SendblueKeys {
   const secretMatch = clean.match(
     /(?:Secret[- ]?Key|API[- ]?Secret|sb[- ]?api[- ]?secret[- ]?key|api_secret|Secret)[:\s]+\"?([A-Za-z0-9_-]{16,})/i,
   );
-  const numMatch = clean.match(
-    /(?:Phone[- ]?Number|From[- ]?Number|number)[:\s]+\"?(\+?\d{10,15})/i,
-  );
 
   if (idMatch) keys.apiKey = idMatch[1];
   if (secretMatch) keys.apiSecret = secretMatch[1];
-  if (numMatch) keys.fromNumber = numMatch[1];
   return keys;
 }
 
@@ -187,9 +180,6 @@ async function importSendblueFromCli(): Promise<SendblueKeys | null> {
       return null;
     }
     console.log(`\n✓ Pulled your Sendblue keys from the CLI.`);
-    if (!parsed.fromNumber) {
-      console.log(`  (Couldn't detect your phone number — you'll be asked for it.)`);
-    }
     return parsed;
   } catch (err) {
     console.log(`\n⚠ Sendblue CLI failed: ${err}`);
@@ -220,7 +210,6 @@ Before you start:
   const sendblueDefaults = {
     SENDBLUE_API_KEY: cli?.apiKey ?? existing.SENDBLUE_API_KEY ?? "",
     SENDBLUE_API_SECRET: cli?.apiSecret ?? existing.SENDBLUE_API_SECRET ?? "",
-    SENDBLUE_FROM_NUMBER: cli?.fromNumber ?? existing.SENDBLUE_FROM_NUMBER ?? "",
   };
 
   const sendbluePrompts = [] as any[];
@@ -237,15 +226,6 @@ Before you start:
       type: "password",
       name: "SENDBLUE_API_SECRET",
       message: "Sendblue API secret",
-      initial: "",
-    });
-  }
-  if (!sendblueDefaults.SENDBLUE_FROM_NUMBER) {
-    sendbluePrompts.push({
-      type: "text",
-      name: "SENDBLUE_FROM_NUMBER",
-      message:
-        "Your Sendblue-provisioned number (the one people TEXT TO, not your personal number). Leave blank to let Sendblue auto-pick.",
       initial: "",
     });
   }
@@ -289,7 +269,6 @@ Before you start:
   Object.assign(answers, {
     SENDBLUE_API_KEY: answers.SENDBLUE_API_KEY ?? sendblueDefaults.SENDBLUE_API_KEY,
     SENDBLUE_API_SECRET: answers.SENDBLUE_API_SECRET ?? sendblueDefaults.SENDBLUE_API_SECRET,
-    SENDBLUE_FROM_NUMBER: answers.SENDBLUE_FROM_NUMBER ?? sendblueDefaults.SENDBLUE_FROM_NUMBER,
   });
 
   const env: Record<string, string> = { ...existing, ...answers };
@@ -355,11 +334,10 @@ Test it:
     without Sendblue).
   • Or text your Sendblue number from a different phone. The agent replies.
 
-A common gotcha:
-  SENDBLUE_FROM_NUMBER must be the Sendblue-provisioned number on your
-  account (the one people text TO). If you set it to your own personal
-  number, Sendblue returns "Cannot send messages to self". Leave it
-  blank and Sendblue auto-picks.
+Note:
+  Replies go out from the Sendblue-provisioned number on your account
+  (auto-picked by Sendblue). Text that number from a different phone
+  to test.
 
 About PUBLIC_URL in .env.local:
   It defaults to http://localhost:${port} and is only read by the OAuth flow

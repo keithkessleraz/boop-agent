@@ -106,9 +106,7 @@ Then wire it up in Sendblue (one-time):
 2. Add as an **INBOUND MESSAGE** webhook
 3. Paste the `Sendblue webhook` URL from the banner, save
 
-Text your Sendblue number from a **different** phone. The agent replies.
-
-> **Gotcha:** `SENDBLUE_FROM_NUMBER` must be the Sendblue-provisioned number (the one people text TO), **not your personal cell**. If you set it to your own number, Sendblue returns `Cannot send messages to self`. Leave it blank and Sendblue auto-picks the right one.
+Text your Sendblue-provisioned number from a **different** phone. The agent replies.
 
 Visit `http://localhost:5173` for the debug dashboard (chat, agents, memory, events). You can also chat from the dashboard's Chat tab without Sendblue.
 
@@ -170,7 +168,6 @@ Everything lives in `.env.local` (auto-created by `npm run setup`). See `.env.ex
 |---|---|---|
 | `CONVEX_URL` / `VITE_CONVEX_URL` | yes | Convex deployment URL. Written by `npx convex dev`. |
 | `SENDBLUE_API_KEY` / `SENDBLUE_API_SECRET` | yes | From your Sendblue dashboard. |
-| `SENDBLUE_FROM_NUMBER` | yes | Your Sendblue-provisioned number. |
 | `BOOP_MODEL` | no | Default `claude-sonnet-4-6`. |
 | `PORT` | no | Default `3456`. |
 | `PUBLIC_URL` | no | Needed for OAuth callbacks and Sendblue webhook URL. |
