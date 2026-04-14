@@ -61,10 +61,15 @@ function parsePhones(output) {
     /* not JSON */
   }
 
-  // The sendblue CLI formats as "+1 (469) 555-1234" — match the whole chunk,
-  // then strip non-digits to get back to E.164.
-  for (const m of clean.matchAll(/\+[\d\s()\-.]{10,25}/g)) {
-    const e164 = "+" + m[0].replace(/\D/g, "");
+  // The sendblue CLI formats like "+1 (305) 336-9541".
+  // Process line-by-line so we don't greedily span into e.g. "1 line total".
+  for (const rawLine of clean.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line.startsWith("+")) continue;
+    // Allow digits, spaces, parens, dashes, dots inside a single line only.
+    const match = line.match(/^\+[\d ()\-.]{9,25}/);
+    if (!match) continue;
+    const e164 = "+" + match[0].replace(/\D/g, "");
     if (/^\+\d{10,15}$/.test(e164) && !seen.has(e164)) {
       seen.add(e164);
       numbers.push(e164);
