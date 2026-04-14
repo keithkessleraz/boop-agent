@@ -64,24 +64,28 @@ const C = {
   reset: "\x1b[0m",
 };
 
-function run(name, cmd, args) {
+function run(name, cmd, args, readyPattern) {
   const child = spawn(cmd, args, {
     cwd: root,
     env: { ...process.env, FORCE_COLOR: "1" },
   });
   const prefix = `${C[name]}${name.padEnd(6)}${C.reset} │ `;
   let buf = "";
+  let resolveReady;
+  const ready = new Promise((r) => (resolveReady = r));
   const feed = (chunk) => {
     buf += chunk.toString();
     let i;
     while ((i = buf.indexOf("\n")) !== -1) {
       const line = buf.slice(0, i);
       if (line.trim()) process.stdout.write(prefix + line + "\n");
+      if (readyPattern && readyPattern.test(line)) resolveReady();
       buf = buf.slice(i + 1);
     }
   };
   child.stdout.on("data", feed);
   child.stderr.on("data", feed);
+  child.ready = ready;
   return child;
 }
 
@@ -155,34 +159,58 @@ ${C.dim}  Install:   brew install ngrok         (macOS)
 
 console.log(`\nBoop dev starting on port ${port}. Ctrl-C to stop everything.\n`);
 
-const children = [
-  run("server", "npx", ["tsx", "watch", "server/index.ts"]),
-  run("convex", "npx", ["convex", "dev"]),
-  run("debug", "npx", ["vite", "--config", "debug/vite.config.ts"]),
-];
+const serverChild = run(
+  "server",
+  "npx",
+  ["tsx", "watch", "server/index.ts"],
+  /listening on :/,
+);
+const convexChild = run(
+  "convex",
+  "npx",
+  ["convex", "dev"],
+  /Convex functions ready/,
+);
+const debugChild = run(
+  "debug",
+  "npx",
+  ["vite", "--config", "debug/vite.config.ts"],
+  /Local:\s+http/,
+);
+const children = [serverChild, convexChild, debugChild];
 
+let ngrokUrlReady = Promise.resolve(null);
 if (useNgrok && ngrokInstalled) {
   const args = ngrokDomain
     ? ["http", port, `--domain=${ngrokDomain}`, "--log=stdout", "--log-format=term", "--log-level=info"]
     : ["http", port, "--log=stdout", "--log-format=term", "--log-level=info"];
-  children.push(run("ngrok", "ngrok", args));
-  waitForNgrokUrl()
-    .then((url) => {
-      if (url) showBanner(url, Boolean(ngrokDomain));
-      else
+  const ngrokChild = run("ngrok", "ngrok", args);
+  children.push(ngrokChild);
+  ngrokUrlReady = waitForNgrokUrl().catch(() => null);
+}
+
+// Wait for all the core services to be ready before printing the banner,
+// so the URL isn't dangled in front of the user while Convex is still booting.
+Promise.all([
+  serverChild.ready,
+  convexChild.ready,
+  debugChild.ready,
+  ngrokUrlReady,
+])
+  .then(([, , , ngrokUrl]) => {
+    if (useNgrok && ngrokInstalled) {
+      if (ngrokUrl) {
+        showBanner(ngrokUrl, Boolean(ngrokDomain));
+      } else {
         console.log(
           `${C.ngrok}ngrok${C.reset} │ could not read tunnel URL from http://127.0.0.1:4040 — check ngrok output above.`,
         );
-    })
-    .catch(() => {});
-} else if (hasStaticUrl) {
-  // User has their own tunnel (Cloudflare, Caddy, etc). Just show the banner.
-  setTimeout(() => showBanner(publicUrl, true), 1500);
-} else {
-  // No tunnel at all (ngrok missing + no stable URL). Show dashboard-only banner.
-  setTimeout(() => {
-    const line = "═".repeat(68);
-    console.log(`
+      }
+    } else if (hasStaticUrl) {
+      showBanner(publicUrl, true);
+    } else {
+      const line = "═".repeat(68);
+      console.log(`
 ${C.banner}${line}
   Boop is running locally.
 
@@ -192,8 +220,9 @@ ${C.banner}${line}
     the server. Use the Chat tab in the dashboard to test for now.
 ${line}${C.reset}
 `);
-  }, 1500);
-}
+    }
+  })
+  .catch(() => {});
 
 let shuttingDown = false;
 const shutdown = (code = 0) => {
