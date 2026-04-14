@@ -108,12 +108,6 @@ Before you start:
       },
       {
         type: "text",
-        name: "PUBLIC_URL",
-        message: "Public URL for Sendblue webhooks (use ngrok for local dev)",
-        initial: existing.PUBLIC_URL ?? "http://localhost:3456",
-      },
-      {
-        type: "text",
         name: "PORT",
         message: "Local server port",
         initial: existing.PORT ?? "3456",
@@ -135,6 +129,7 @@ Before you start:
 
   const env: Record<string, string> = { ...existing, ...answers };
   delete (env as any).runConvex;
+  if (!env.PUBLIC_URL) env.PUBLIC_URL = `http://localhost:${env.PORT ?? "3456"}`;
   writeEnv(ENV_PATH, env);
 
   banner("Claude authentication");
@@ -162,14 +157,47 @@ You can override with ANTHROPIC_API_KEY in .env.local if you'd rather use an API
     console.log("\nSkipped Convex. Run `npx convex dev` yourself when ready.");
   }
 
-  banner("Done");
+  const port = answers.PORT ?? "3456";
+  banner("You're set up. Here's how to actually run it.");
   console.log(`
-Next steps:
-  1. (Optional) add integrations — see INTEGRATIONS.md
-  2. Start dev:         npm run dev
-  3. Expose your port:  ngrok http ${answers.PORT}
-  4. Point your Sendblue webhook at:  <ngrok-url>/sendblue/webhook
-  5. Text your Sendblue number. The agent should reply.
+You need TWO terminal windows for local dev — one for the server, one for ngrok.
+
+┌─ Terminal 1 ───────────────────────────────────────────────┐
+│                                                            │
+│   npm run dev                                              │
+│                                                            │
+│   Starts: server + Convex watcher + debug dashboard.       │
+│   Leave this running.                                      │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+
+┌─ Terminal 2 ───────────────────────────────────────────────┐
+│                                                            │
+│   ngrok http ${port}                                             │
+│                                                            │
+│   Copy the https://<something>.ngrok.app URL it prints.    │
+│   Leave this running too.                                  │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+
+Then wire up Sendblue:
+
+  1. Go to your Sendblue dashboard → Numbers → your number → Webhooks.
+  2. Paste:  https://<your-ngrok>.ngrok.app/sendblue/webhook
+  3. Save.
+
+Test it:
+  • Open http://localhost:5173 for the debug dashboard.
+  • Or text your Sendblue number — the agent should reply.
+
+About PUBLIC_URL in .env.local:
+  It defaults to http://localhost:${port} and is only read by the OAuth flow
+  (for Google/Slack redirect URIs). If you enable those integrations later,
+  paste your ngrok URL into .env.local as PUBLIC_URL and restart.
+
+Integrations:
+  All four examples (Gmail, Calendar, Notion, Slack) ship OFF.
+  Uncomment them one at a time in server/integrations/registry.ts.
 `);
 }
 
