@@ -130,6 +130,10 @@ Before you start:
   const env: Record<string, string> = { ...existing, ...answers };
   delete (env as any).runConvex;
   if (!env.PUBLIC_URL) env.PUBLIC_URL = `http://localhost:${env.PORT ?? "3456"}`;
+  // Clear stale / stub Convex values so `convex dev` can populate them freshly.
+  // (`convex dev` uses .convex/ to identify the deployment, not these env vars.)
+  if (env.CONVEX_URL?.includes("example.convex.cloud")) delete env.CONVEX_URL;
+  if (env.VITE_CONVEX_URL?.includes("example.convex.cloud")) delete env.VITE_CONVEX_URL;
   writeEnv(ENV_PATH, env);
 
   banner("Claude authentication");
