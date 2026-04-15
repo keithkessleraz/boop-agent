@@ -90,7 +90,7 @@ async function main() {
 
   let listing;
   try {
-    listing = await runCapture(cmd, [...leading, "webhooks"]);
+    listing = await runCapture(cmd, [...leading, "webhooks", "list"]);
   } catch (err) {
     console.error(`[webhook] couldn't list webhooks (${err.message}). Make sure you've logged in with \`npx @sendblue/cli login\`.`);
     return;
