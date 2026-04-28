@@ -46,7 +46,22 @@ async function main() {
   // ordering the JSON parser consumes the stream first and the raw buffer
   // arrives empty.
   app.use("/composio/webhook", express.raw({ type: "application/json", limit: "2mb" }));
-  app.use(express.json({ limit: "2mb" }));
+  app.use(
+    express.json({
+      limit: "2mb",
+      verify: (req, _res, buf) => {
+        // Stash raw body bytes for HMAC verification on signed webhook routes
+        // (Sendblue). The Composio webhook handles its own raw parsing above.
+        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
+
+  if (!process.env.SENDBLUE_SIGNING_SECRET) {
+    console.warn(
+      "[security] SENDBLUE_SIGNING_SECRET is not set — Sendblue webhook signature verification is DISABLED. Forged webhooks will be accepted. Set this env var in .env.local for production.",
+    );
+  }
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "boop-agent" });
