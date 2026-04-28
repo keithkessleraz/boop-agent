@@ -311,6 +311,12 @@ export async function handleUserMessage(opts: HandleOpts): Promise<string> {
       },
     })) {
       if (msg.type === "assistant") {
+        // Reset `reply` on each new assistant turn so only the LAST turn's
+        // text becomes the user-facing iMessage. Earlier turns are usually
+        // pre-tool-call narration ("Got it — saving that now.") that, if
+        // concatenated with the post-tool-result final text, sends as one
+        // smushed iMessage. Streaming via onThinking still sees everything.
+        reply = "";
         for (const block of msg.message.content) {
           if (block.type === "text") {
             reply += block.text;
