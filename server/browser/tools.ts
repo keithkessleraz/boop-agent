@@ -126,12 +126,10 @@ export function createBrowserMcp() {
         {},
         async () => fmt(await ab(["screenshot", "--annotate"])),
       ),
-      tool(
-        "browser_close",
-        "Close the shared browser session. Only call when truly done — other parallel agents may still need it.",
-        {},
-        async () => fmt(await ab(["close"])),
-      ),
+      // Intentionally no browser_close: the agent-browser daemon is shared across
+      // every sub-agent (single --session boop). If one agent closed it, parallel
+      // browser-using agents would see their next call fail. The server owns
+      // lifecycle; agents just borrow tabs.
     ],
   });
 }

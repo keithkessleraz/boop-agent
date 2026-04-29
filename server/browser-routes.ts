@@ -81,9 +81,10 @@ export function createBrowserRouter(): express.Router {
       res.status(400).json({ error: "url must be http(s)" });
       return;
     }
-    // Fire and forget — `agent-browser open` returns once navigation completes
-    // (a few seconds), but the Chrome window stays open for the user to log in.
-    // We wait briefly to surface any immediate launch errors, then return.
+    // Fire and forget — return 200 as soon as the spawn is in flight. Launch
+    // failures are logged server-side; the user will see Chrome simply not
+    // appear and can retry. Blocking the request on Chrome's startup would
+    // stall the click for 1-3s without much actionable signal.
     const child = execa("agent-browser", [...browserBaseArgs(), "open", parsed.toString()], {
       preferLocal: true,
       timeout: 30_000,

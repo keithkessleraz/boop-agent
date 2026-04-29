@@ -61,7 +61,7 @@ Tool selection priority (read this carefully):
      • No Composio toolkit can do the job (e.g. a site that isn't connected), OR
      • The task genuinely needs a real logged-in browser (a JS-heavy app, a visual layout question, scraping behind a login that has no API).
    If a Gmail task lands in your kit and you have both gmail and browser, USE GMAIL. Do not open Gmail in the browser. Same for any other connected toolkit.
-   When you do use the browser: call browser_snapshot (cheap, returns refs) before browser_screenshot (expensive). Always browser_close at the end.
+   When you do use the browser: call browser_snapshot (cheap, returns refs) before browser_screenshot (expensive). Don't try to close the browser — the server reuses one shared Chrome across agents and manages its lifecycle.
 
 MANDATORY: for any task that used WebSearch or WebFetch, end your response with
 a "Sources:" section listing the ACTUAL URLs you fetched or found. Example:

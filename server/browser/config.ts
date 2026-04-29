@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
+import { getBrowserHeaded } from "../runtime-config.js";
 
 // agent-browser's --profile flag accepts either an existing Chrome profile NAME
 // or a directory path for a persistent custom profile. We always pass a path so
@@ -51,8 +52,6 @@ export function browserBaseArgs(): string[] {
 // drives --headless=new on Chrome spawn. The user toggles this from the debug
 // UI (settings.browser_headed); we read the live value per call via
 // runtime-config and pass it through to every execa call.
-import { getBrowserHeaded } from "../runtime-config.js";
-
 export async function getBrowserEnv(): Promise<Record<string, string>> {
   const headed = await getBrowserHeaded();
   return {
