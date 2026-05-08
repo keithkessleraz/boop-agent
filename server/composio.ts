@@ -442,7 +442,13 @@ function extractAccountIdentity(state: unknown, data: unknown): AccountIdentity 
 export async function renameConnection(connectionId: string, alias: string): Promise<void> {
   const composio = getComposio();
   if (!composio) throw new Error("COMPOSIO_API_KEY not set");
-  await composio.connectedAccounts.update(connectionId, { alias });
+  // @composio/core 0.9 dropped `alias` from the high-level update() params (it
+  // only handles status changes now). Drop down to the underlying client's
+  // PATCH /connected-accounts/:id, which still accepts alias updates.
+  // The `client` field is `private` on Composio<>, so we cast to access it —
+  // safe because we control both ends of this dependency.
+  const rawClient = (composio as unknown as { client: { connectedAccounts: { patch: (id: string, body: { alias?: string }) => Promise<unknown> } } }).client;
+  await rawClient.connectedAccounts.patch(connectionId, { alias });
 }
 
 export class ComposioNeedsAuthConfigError extends Error {
