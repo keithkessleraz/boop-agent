@@ -32,10 +32,13 @@ StandardOutput=journal
 StandardError=journal
 
 # Hardening — Boop only needs to listen on a port and read its own dir.
+# We drop ProtectHome because the Claude Code CLI writes to multiple paths
+# under $HOME (.claude/, .claude.json, .cache/claude-cli-nodejs/, .local/
+# share/). The dedicated `boop` user already isolates this from other users,
+# and ProtectSystem=strict prevents writes to system paths.
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/opt/boop /home/boop/.claude
+ReadWritePaths=/opt/boop /home/boop
 PrivateTmp=true
 
 [Install]
