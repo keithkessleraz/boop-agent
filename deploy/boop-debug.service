@@ -1,0 +1,49 @@
+# /etc/systemd/system/boop-debug.service
+#
+# Runs the Vite dev server for the debug dashboard, bound to 127.0.0.1:5173
+# only. NOT exposed to the public internet (the Hetzner Cloud Firewall and
+# ufw both block 5173 anyway — defense in depth).
+#
+# Access from your laptop with an SSH tunnel:
+#   ssh -i ~/.ssh/boop_deploy -L 5173:localhost:5173 -N root@178.105.87.21
+# Then open http://localhost:5173 in your browser.
+#
+# Install:
+#   sudo cp deploy/boop-debug.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now boop-debug
+#
+# Tail logs: journalctl -u boop-debug -f
+
+[Unit]
+Description=Boop debug dashboard (Vite dev server)
+After=network-online.target boop.service
+Wants=network-online.target
+# Vite proxies /api and /ws to the boop server on :3456 — the dashboard is
+# functional even if boop is down, but we order after it so a single reboot
+# brings everything up cleanly.
+
+[Service]
+Type=simple
+User=boop
+Group=boop
+WorkingDirectory=/opt/boop/repo
+EnvironmentFile=/opt/boop/repo/.env.local
+Environment=HOME=/home/boop
+Environment=NODE_ENV=development
+# --host 127.0.0.1 is the Vite default but we make it explicit so this never
+# accidentally listens on 0.0.0.0 if the config changes upstream.
+ExecStart=/usr/bin/npx vite --config debug/vite.config.ts --host 127.0.0.1 --port 5173
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Match boop.service hardening exactly.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/boop /home/boop
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
