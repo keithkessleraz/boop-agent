@@ -9,7 +9,8 @@
 set -euo pipefail
 
 DOMAIN="boop.planforadventure.com"
-REPO_URL="https://github.com/raroque/boop-agent.git"
+REPO_URL="https://github.com/keithkessleraz/boop-agent.git"
+UPSTREAM_URL="https://github.com/raroque/boop-agent.git"
 NODE_MAJOR=22
 
 echo "==> Updating apt + base packages"
@@ -40,9 +41,11 @@ echo "==> Cloning repo to /opt/boop/repo (if missing)"
 mkdir -p /opt/boop
 chown boop:boop /opt/boop
 if [ ! -d /opt/boop/repo ]; then
+  # origin = your fork (push your customizations here)
+  # upstream = raroque/boop-agent (pulls from /upgrade-boop)
   sudo -u boop git clone "${REPO_URL}" /opt/boop/repo
-  # Rename origin → upstream so /upgrade-boop works
-  sudo -u boop git -C /opt/boop/repo remote rename origin upstream
+  sudo -u boop git -C /opt/boop/repo remote add upstream "${UPSTREAM_URL}"
+  sudo -u boop git -C /opt/boop/repo fetch upstream --no-tags
 fi
 
 echo "==> Installing npm deps"
