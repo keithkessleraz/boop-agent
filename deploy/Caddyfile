@@ -1,0 +1,35 @@
+# /etc/caddy/Caddyfile on the Boop server.
+# Caddy auto-provisions a Let's Encrypt cert for boop.planforadventure.com
+# on first start (port 80 must be open and DNS A record pointing here).
+
+boop.planforadventure.com {
+	# Forward everything to the Express server on :3456.
+	# Boop's webhook lives at /sendblue/webhook; it expects to receive
+	# the raw request body unchanged for HMAC verification.
+	reverse_proxy localhost:3456 {
+		# Pass real client IP through; Express trusts X-Forwarded-* via
+		# Sendblue's known forwarding pattern.
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# Tighten the default headers a bit. Boop is a single-user agent
+	# so HSTS is fine; webhook clients (Sendblue, Composio) ignore it.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		# Don't expose Caddy version
+		-Server
+	}
+
+	# Compress responses where it helps (the debug UI assets benefit;
+	# webhook responses are tiny, doesn't matter either way).
+	encode gzip zstd
+
+	# Log to journald-friendly stdout so `journalctl -u caddy` shows it.
+	log {
+		output stdout
+		format console
+	}
+}

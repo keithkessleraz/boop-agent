@@ -1,0 +1,42 @@
+# /etc/systemd/system/boop.service
+#
+# Runs the Boop server as a non-root user with auto-restart.
+# Relies on /opt/boop/repo/.env.local for all credentials.
+#
+# Install:
+#   sudo cp deploy/boop.service /etc/systemd/system/boop.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now boop
+#
+# Tail logs: journalctl -u boop -f
+
+[Unit]
+Description=Boop iMessage agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=boop
+Group=boop
+WorkingDirectory=/opt/boop/repo
+EnvironmentFile=/opt/boop/repo/.env.local
+# Claude Code stores its OAuth token under $HOME/.claude — make sure HOME
+# resolves so the SDK can pick it up.
+Environment=HOME=/home/boop
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Hardening — Boop only needs to listen on a port and read its own dir.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/boop /home/boop/.claude
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

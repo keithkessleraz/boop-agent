@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMD=$(jq -r '.tool_input.command'); echo \"$CMD\" | grep -qE '(^|[^a-zA-Z0-9_])(ssh|scp|rsync)([[:space:]]).*(boop_deploy|boop@boop\\.planforadventure\\.com|@178\\.105\\.87\\.21)' && ! echo \"$CMD\" | grep -q 'BOOP-OK' && echo 'BLOCKED: command targets the Boop server. Re-run with the token BOOP-OK in the command (e.g. as a trailing comment) to confirm intent.' >&2 && exit 2 || exit 0",
+            "timeout": 5,
+            "statusMessage": "Checking Boop-server target..."
+          },
+          {
+            "type": "command",
+            "command": "CMD=$(jq -r '.tool_input.command'); echo \"$CMD\" | grep -qE '^[[:space:]]*hcloud[[:space:]]+(server|firewall|ssh-key|volume|load-balancer)[[:space:]]+(delete|remove)' && ! echo \"$CMD\" | grep -q 'HETZNER-OK' && echo 'BLOCKED: hcloud destructive command. Re-run with the token HETZNER-OK in the command to confirm.' >&2 && exit 2 || exit 0",
+            "timeout": 5,
+            "statusMessage": "Checking hcloud destructive op..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | grep -qE 'git add (-A|\\.|\\*)([[:space:]]|$)' && echo 'BLOCKED: stage specific files only — git add -A / . / * is forbidden. Public repo, PII risk per CLAUDE.md.' >&2 && exit 2 || exit 0",
+            "timeout": 5,
+            "statusMessage": "Checking git staging scope..."
+          }
+        ]
+      }
+    ]
+  }
+}
